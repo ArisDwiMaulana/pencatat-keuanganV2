@@ -198,27 +198,27 @@ CREATE INDEX IF NOT EXISTS idx_categories_user ON categories(user_id);
 **Tujuan:** Setup project Rust, install semua dependencies, inisialisasi database.
 
 #### Tasks:
-- [ ] Buat `Cargo.toml` dengan semua dependencies
-- [ ] Buat `src/config.rs` — Konfigurasi dari environment variables:
+- [x] Buat `Cargo.toml` dengan semua dependencies
+- [x] Buat `src/config.rs` — Konfigurasi dari environment variables:
   - `DATABASE_URL` (default: `data/data.db`)
   - `SERVER_HOST` (default: `127.0.0.1`)
   - `SERVER_PORT` (default: `8080`)
   - `SESSION_SECRET` (random key, minimal 64 bytes)
-- [ ] Buat `src/db.rs` — Database initialization:
+- [x] Buat `src/db.rs` — Database initialization:
   - Fungsi `init_db()` yang membuat semua tabel
   - Menggunakan `Mutex<Connection>` yang di-wrap dalam `actix_web::web::Data`
-- [ ] Buat `src/models.rs` — Struct data:
+- [x] Buat `src/models.rs` — Struct data:
   - User, Category, Transaction
   - CreateTransactionRequest, LoginRequest, SignupRequest
   - ApiResponse (generic response wrapper)
-- [ ] Buat `src/main.rs` — Skeleton server:
+- [x] Buat `src/main.rs` — Skeleton server:
   - Setup actix-web server
   - Attach database connection ke app state
   - Setup session middleware
   - Route `/` ke static files
   - Health check endpoint `GET /api/health`
-- [ ] Buat folder `static/` dan `data/`
-- [ ] Buat `.env.example`
+- [x] Buat folder `static/` dan `data/`
+- [x] Buat `.env.example`
 
 #### Dependencies (Cargo.toml):
 ```toml
