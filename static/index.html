@@ -3,11 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pencatat Keuangan</title>
+    <title>Masuk / Daftar - Pencatat Keuangan</title>
+    <!-- Tailwind CSS v4 Browser Script -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- DaisyUI v5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
 </head>
-<body>
-    <div style="display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
-        <h2>Pencatat Keuangan Server Ready</h2>
+<body class="bg-base-200 min-h-screen flex items-center justify-center p-4">
+
+    <div class="card w-full max-w-md bg-base-100 shadow-xl border border-base-300">
+        <div class="card-body">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <div class="inline-block p-3 rounded-full bg-primary/10 text-primary mb-2 text-3xl">
+                    💰
+                </div>
+                <h1 class="text-2xl font-bold text-base-content">Pencatat Keuangan</h1>
+                <p class="text-sm text-base-content/60">Kelola arus kas pribadi dengan mudah & cepat</p>
+            </div>
+
+            <!-- Tab Toggle -->
+            <div role="tablist" class="tabs tabs-boxed mb-6">
+                <button role="tab" id="tab-login" class="tab tab-active flex-1 font-medium">Masuk (Login)</button>
+                <button role="tab" id="tab-signup" class="tab flex-1 font-medium">Daftar (Signup)</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="form-login" class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Username</span>
+                    </label>
+                    <input type="text" id="login-username" placeholder="Masukkan username" class="input input-bordered w-full" required autocomplete="username" />
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Password</span>
+                    </label>
+                    <input type="password" id="login-password" placeholder="••••••••" class="input input-bordered w-full" required autocomplete="current-password" />
+                </div>
+
+                <div class="form-control mt-6">
+                    <button type="submit" id="btn-login" class="btn btn-primary w-full shadow">
+                        🔑 Masuk
+                    </button>
+                </div>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="form-signup" class="space-y-4 hidden">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Nama Lengkap / Panggilan</span>
+                    </label>
+                    <input type="text" id="signup-name" placeholder="Misal: John Doe" class="input input-bordered w-full" required />
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Username</span>
+                    </label>
+                    <input type="text" id="signup-username" placeholder="Minimal 3 karakter" class="input input-bordered w-full" required autocomplete="username" minlength="3" />
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Password</span>
+                    </label>
+                    <input type="password" id="signup-password" placeholder="Minimal 6 karakter" class="input input-bordered w-full" required autocomplete="new-password" minlength="6" />
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Konfirmasi Password</span>
+                    </label>
+                    <input type="password" id="signup-confirm-password" placeholder="Ulangi password" class="input input-bordered w-full" required autocomplete="new-password" minlength="6" />
+                </div>
+
+                <div class="form-control mt-6">
+                    <button type="submit" id="btn-signup" class="btn btn-primary w-full shadow">
+                        ✨ Buat Akun
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
+
+    <!-- Scripts -->
+    <script src="/js/common.js"></script>
+    <script src="/js/auth.js"></script>
 </body>
 </html>

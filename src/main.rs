@@ -1,11 +1,13 @@
 use actix_files::Files;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
-use actix_web::cookie::Key;
+use actix_web::cookie::{Key, SameSite};
 use actix_web::{get, middleware::Logger, web, App, HttpResponse, HttpServer, Responder};
 use std::sync::Mutex;
 
 mod config;
 mod db;
+mod handlers;
+mod middleware;
 mod models;
 
 use config::Config;
@@ -56,11 +58,22 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(
                 SessionMiddleware::builder(CookieSessionStore::default(), secret_key.clone())
-                    .cookie_secure(false)
+                    .cookie_name("id_session".to_string())
+                    .cookie_secure(false) // Set to false so HTTP in dev works
+                    .cookie_same_site(SameSite::Lax)
+                    .cookie_http_only(true)
                     .build(),
             )
             // Health check API
             .service(health_check)
+            // Auth endpoints
+            .service(
+                web::scope("/api/auth")
+                    .service(handlers::auth::signup)
+                    .service(handlers::auth::login)
+                    .service(handlers::auth::logout)
+                    .service(handlers::auth::me),
+            )
             // Static files (must be registered after specific API endpoints)
             .service(Files::new("/", "./static").index_file("index.html"))
     })

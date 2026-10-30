@@ -257,22 +257,22 @@ dotenv = "0.15"
 **Tujuan:** User bisa signup, login, logout, dan session bertahan saat refresh.
 
 #### Tasks:
-- [ ] Buat `src/handlers/auth.rs`:
+- [x] Buat `src/handlers/auth.rs`:
   - `POST /api/auth/signup` — Validasi input, hash password (Argon2), insert user, seed kategori default, set session
   - `POST /api/auth/login` — Cari user, verify password, set session
   - `POST /api/auth/logout` — Hapus session
   - `GET /api/auth/me` — Cek session, return user info
-- [ ] Buat `src/middleware/auth_guard.rs`:
+- [x] Buat `src/middleware/auth_guard.rs`:
   - Cek session cookie di setiap request ke protected route
   - Jika tidak ada session → return 401 Unauthorized
   - Jika ada → inject user_id ke request
-- [ ] Buat `static/index.html` — Halaman Login/Signup:
+- [x] Buat `static/index.html` — Halaman Login/Signup:
   - Tab toggle antara Login dan Signup form
   - Form login: username, password
   - Form signup: display name, username, password, confirm password
   - DaisyUI card + form styling
-- [ ] Buat `static/js/auth.js` — Frontend auth logic
-- [ ] Buat `static/js/common.js` — Shared utilities:
+- [x] Buat `static/js/auth.js` — Frontend auth logic
+- [x] Buat `static/js/common.js` — Shared utilities:
   - `apiFetch(url, options)` — wrapper fetch dengan error handling
   - `checkAuth()` — cek session, redirect ke login jika expired
   - `renderNavbar()` — generate navbar HTML

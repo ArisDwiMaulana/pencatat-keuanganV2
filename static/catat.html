@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catat Transaksi - Pencatat Keuangan</title>
+    <!-- Tailwind CSS v4 Browser Script -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- DaisyUI v5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+</head>
+<body class="bg-base-200 min-h-screen">
+    <!-- Navbar Placeholder -->
+    <div id="navbar-placeholder"></div>
+
+    <main class="container mx-auto p-4 md:p-6 max-w-2xl">
+        <div class="card bg-base-100 shadow-xl border border-base-300">
+            <div class="card-body">
+                <h2 class="card-title text-xl font-bold mb-2">Halaman Catat (Milestone 2 Auth Verified)</h2>
+                <div class="alert alert-success text-white">
+                    <span>Selamat! Anda berhasil login dan sesi Anda aktif.</span>
+                </div>
+                <div class="mt-4 p-4 bg-base-200 rounded-box">
+                    <p class="text-sm font-semibold">Informasi Akun:</p>
+                    <p id="user-info" class="text-sm text-base-content/70 mt-1">Memuat data user...</p>
+                </div>
+                <div class="mt-6 flex gap-2">
+                    <button onclick="logout()" class="btn btn-error btn-outline">
+                        🚪 Logout Sekarang
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth(true);
+            if (user) {
+                renderNavbar('catat', user);
+                document.getElementById('user-info').innerText =
+                    `Nama: ${user.display_name} | Username: @${user.username} (ID: ${user.id})`;
+            }
+        });
+    </script>
+</body>
+</html>
