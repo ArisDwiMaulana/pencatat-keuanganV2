@@ -311,15 +311,15 @@ dotenv = "0.15"
 **Tujuan:** User bisa mencatat transaksi pemasukan dan pengeluaran.
 
 #### Tasks:
-- [ ] Buat `src/handlers/category.rs`:
+- [x] Buat `src/handlers/category.rs`:
   - `GET /api/categories?type=income|expense` — List kategori user
   - `POST /api/categories` — Tambah kategori baru
   - `DELETE /api/categories/{id}` — Hapus kategori (cek bukan default, cek milik user)
-- [ ] Buat `src/handlers/transaction.rs`:
+- [x] Buat `src/handlers/transaction.rs`:
   - `POST /api/transactions` — Tambah transaksi (validasi input)
   - `DELETE /api/transactions/{id}` — Hapus transaksi (cek milik user)
-- [ ] Buat `static/catat.html` — Halaman Pencatatan
-- [ ] Buat `static/js/catat.js` — Frontend pencatatan:
+- [x] Buat `static/catat.html` — Halaman Pencatatan
+- [x] Buat `static/js/catat.js` — Frontend pencatatan:
   - Load kategori dari API
   - Toggle tab pengeluaran/pemasukan → ganti dropdown kategori
   - Submit form → POST ke API

@@ -74,6 +74,14 @@ async fn main() -> std::io::Result<()> {
                     .service(handlers::auth::logout)
                     .service(handlers::auth::me),
             )
+            // Category endpoints
+            .service(handlers::category::list_categories)
+            .service(handlers::category::create_category)
+            .service(handlers::category::delete_category)
+            // Transaction endpoints
+            .service(handlers::transaction::create_transaction)
+            .service(handlers::transaction::list_transactions)
+            .service(handlers::transaction::delete_transaction)
             // Static files (must be registered after specific API endpoints)
             .service(Files::new("/", "./static").index_file("index.html"))
     })

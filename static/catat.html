@@ -14,35 +14,126 @@
     <div id="navbar-placeholder"></div>
 
     <main class="container mx-auto p-4 md:p-6 max-w-2xl">
+        <!-- Form Pencatatan -->
         <div class="card bg-base-100 shadow-xl border border-base-300">
             <div class="card-body">
-                <h2 class="card-title text-xl font-bold mb-2">Halaman Catat (Milestone 2 Auth Verified)</h2>
-                <div class="alert alert-success text-white">
-                    <span>Selamat! Anda berhasil login dan sesi Anda aktif.</span>
+                <div>
+                    <h1 class="card-title text-xl font-bold">Catat Transaksi</h1>
+                    <p class="text-sm text-base-content/60 mt-1">Catat pemasukan dan pengeluaran Anda dengan cepat.</p>
                 </div>
-                <div class="mt-4 p-4 bg-base-200 rounded-box">
-                    <p class="text-sm font-semibold">Informasi Akun:</p>
-                    <p id="user-info" class="text-sm text-base-content/70 mt-1">Memuat data user...</p>
-                </div>
-                <div class="mt-6 flex gap-2">
-                    <button onclick="logout()" class="btn btn-error btn-outline">
-                        🚪 Logout Sekarang
+
+                <!-- Toggle Tipe Transaksi -->
+                <div role="tablist" class="tabs tabs-boxed w-full mt-2">
+                    <button type="button" role="tab" id="tab-expense" class="tab tab-active flex-1 font-semibold">
+                        📤 Pengeluaran
                     </button>
+                    <button type="button" role="tab" id="tab-income" class="tab flex-1 font-semibold">
+                        📥 Pemasukan
+                    </button>
+                </div>
+
+                <form id="form-transaction" class="space-y-4 mt-2" novalidate>
+                    <!-- Kategori -->
+                    <div class="form-control">
+                        <label class="label" for="category">
+                            <span class="label-text font-semibold">Kategori</span>
+                        </label>
+                        <select id="category" class="select select-bordered w-full" required>
+                            <option value="">Memuat kategori...</option>
+                        </select>
+                    </div>
+
+                    <!-- Jenis Transaksi -->
+                    <div class="form-control">
+                        <span class="label">
+                            <span class="label-text font-semibold">Jenis Transaksi</span>
+                        </span>
+                        <div class="flex flex-wrap gap-6">
+                            <label class="label cursor-pointer gap-2 py-1">
+                                <input type="radio" name="payment_method" value="cash" class="radio radio-primary radio-sm" checked />
+                                <span class="label-text">💵 Cash</span>
+                            </label>
+                            <label class="label cursor-pointer gap-2 py-1">
+                                <input type="radio" name="payment_method" value="cashless" class="radio radio-primary radio-sm" />
+                                <span class="label-text">💳 Cashless</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Nominal -->
+                    <div class="form-control">
+                        <label class="label" for="amount">
+                            <span class="label-text font-semibold">Nominal</span>
+                        </label>
+                        <label class="input input-bordered flex items-center gap-2 w-full">
+                            <span class="font-semibold text-base-content/60">Rp</span>
+                            <input type="number" id="amount" class="grow" placeholder="0" min="1" step="any" inputmode="numeric" required />
+                        </label>
+                    </div>
+
+                    <!-- Tanggal -->
+                    <div class="form-control">
+                        <label class="label" for="date">
+                            <span class="label-text font-semibold">Tanggal</span>
+                        </label>
+                        <input type="date" id="date" class="input input-bordered w-full" required />
+                    </div>
+
+                    <!-- Keterangan -->
+                    <div class="form-control">
+                        <label class="label" for="note">
+                            <span class="label-text font-semibold">Keterangan <span class="text-base-content/50 font-normal">(opsional)</span></span>
+                        </label>
+                        <input type="text" id="note" class="input input-bordered w-full" placeholder="Misal: Makan siang" maxlength="255" />
+                    </div>
+
+                    <div class="form-control mt-2">
+                        <button type="submit" id="btn-save" class="btn btn-primary w-full shadow">
+                            💾 Simpan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Transaksi Hari Ini -->
+        <div class="card bg-base-100 shadow-xl border border-base-300 mt-6">
+            <div class="card-body">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="card-title text-lg">Transaksi Hari Ini</h2>
+                    <div id="today-summary" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Loading -->
+                <div id="today-loading" class="flex justify-center py-6">
+                    <span class="loading loading-spinner loading-md text-primary"></span>
+                </div>
+
+                <!-- Empty state -->
+                <div id="today-empty" class="hidden text-center py-8">
+                    <div class="text-4xl mb-2">🗒️</div>
+                    <p class="text-sm text-base-content/60">Belum ada transaksi hari ini.</p>
+                </div>
+
+                <!-- Tabel -->
+                <div id="today-table-wrapper" class="hidden overflow-x-auto">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Kategori</th>
+                                <th>Jenis</th>
+                                <th class="text-right">Nominal</th>
+                                <th class="text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="today-list"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </main>
 
     <script src="/js/common.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            const user = await checkAuth(true);
-            if (user) {
-                renderNavbar('catat', user);
-                document.getElementById('user-info').innerText =
-                    `Nama: ${user.display_name} | Username: @${user.username} (ID: ${user.id})`;
-            }
-        });
-    </script>
+    <script src="/js/catat.js"></script>
 </body>
 </html>
