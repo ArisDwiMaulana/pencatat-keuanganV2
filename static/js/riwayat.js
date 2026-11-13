@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupFilterListeners();
     setupPagination();
     setupDeleteHandler();
+    setupExport();
 
     await loadTransactions(1);
 });
@@ -351,6 +352,39 @@ function setupDeleteHandler() {
             showToast('Terjadi kesalahan jaringan', 'error');
         }
     });
+}
+
+/* --------------------------------- Export -------------------------------- */
+
+function setupExport() {
+    const btnExport = document.getElementById('btn-export');
+    if (!btnExport) return;
+
+    btnExport.addEventListener('click', exportCsv);
+}
+
+function exportCsv() {
+    const range = getDateRange();
+
+    if (!range.from || !range.to) {
+        showToast('Lengkapi tanggal "Dari" dan "Sampai" untuk export CSV', 'warning');
+        return;
+    }
+
+    if (range.from > range.to) {
+        showToast('Tanggal "Dari" tidak boleh melebihi "Sampai"', 'warning');
+        return;
+    }
+
+    const params = new URLSearchParams({
+        date_from: range.from,
+        date_to: range.to,
+        type: getSelectedFilter('filter-type'),
+        payment_method: getSelectedFilter('filter-payment'),
+    });
+
+    // Navigasi ke endpoint attachment akan memicu download tanpa meninggalkan halaman.
+    window.location.href = `/api/export/csv?${params.toString()}`;
 }
 
 /* -------------------------------- Helpers -------------------------------- */

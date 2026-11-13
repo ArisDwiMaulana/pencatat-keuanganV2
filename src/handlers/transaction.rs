@@ -23,18 +23,20 @@ pub struct TransactionQuery {
 const DEFAULT_PER_PAGE: i64 = 20;
 const MAX_PER_PAGE: i64 = 100;
 
-const TRANSACTION_SELECT: &str = "SELECT t.id, t.user_id, t.category_id, c.name, t.type,
+pub(crate) const TRANSACTION_SELECT: &str = "SELECT t.id, t.user_id, t.category_id, c.name, t.type,
             t.payment_method, t.amount, t.date, t.note, t.created_at
      FROM transactions t
      JOIN categories c ON c.id = t.category_id";
 
-const TRANSACTION_FILTER: &str = "WHERE t.user_id = ?1
+pub(crate) const TRANSACTION_FILTER: &str = "WHERE t.user_id = ?1
        AND (?2 IS NULL OR t.type = ?2)
        AND (?3 IS NULL OR t.payment_method = ?3)
        AND (?4 IS NULL OR t.date >= ?4)
        AND (?5 IS NULL OR t.date <= ?5)";
 
-fn row_to_transaction(row: &rusqlite::Row<'_>) -> rusqlite::Result<TransactionWithCategory> {
+pub(crate) fn row_to_transaction(
+    row: &rusqlite::Row<'_>,
+) -> rusqlite::Result<TransactionWithCategory> {
     Ok(TransactionWithCategory {
         id: row.get(0)?,
         user_id: row.get(1)?,
@@ -63,6 +65,61 @@ fn normalize_filter(value: Option<&str>, allowed: &[&'static str]) -> Result<Opt
             .copied()
             .map(Some)
             .ok_or_else(|| format!("Nilai filter '{}' tidak valid", v)),
+    }
+}
+
+/// Filter transaksi yang sudah divalidasi, dipakai oleh endpoint list & export.
+pub(crate) struct TransactionFilter<'a> {
+    pub(crate) type_filter: Option<&'static str>,
+    pub(crate) payment_filter: Option<&'static str>,
+    pub(crate) date_from: Option<&'a str>,
+    pub(crate) date_to: Option<&'a str>,
+}
+
+impl<'a> TransactionFilter<'a> {
+    pub(crate) fn parse(
+        type_value: Option<&str>,
+        payment_value: Option<&str>,
+        date_from: Option<&'a str>,
+        date_to: Option<&'a str>,
+    ) -> Result<Self, String> {
+        let type_filter = normalize_filter(type_value, &["income", "expense"])
+            .map_err(|msg| format!("Filter type: {}", msg))?;
+
+        let payment_filter = normalize_filter(payment_value, &["cash", "cashless"])
+            .map_err(|msg| format!("Filter payment_method: {}", msg))?;
+
+        let date_from = date_from.map(str::trim).filter(|d| !d.is_empty());
+        let date_to = date_to.map(str::trim).filter(|d| !d.is_empty());
+
+        if let Some(d) = date_from {
+            if !is_valid_date(d) {
+                return Err(
+                    "Parameter date_from tidak valid (gunakan YYYY-MM-DD)".to_string(),
+                );
+            }
+        }
+
+        if let Some(d) = date_to {
+            if !is_valid_date(d) {
+                return Err("Parameter date_to tidak valid (gunakan YYYY-MM-DD)".to_string());
+            }
+        }
+
+        if let (Some(from), Some(to)) = (date_from, date_to) {
+            if from > to {
+                return Err(
+                    "Rentang tanggal tidak valid: date_from melebihi date_to".to_string(),
+                );
+            }
+        }
+
+        Ok(TransactionFilter {
+            type_filter,
+            payment_filter,
+            date_from,
+            date_to,
+        })
     }
 }
 
@@ -204,49 +261,17 @@ pub async fn list_transactions(
     query: web::Query<TransactionQuery>,
 ) -> impl Responder {
     // --- Validasi filter ---
-    let type_filter = match normalize_filter(query.r#type.as_deref(), &["income", "expense"]) {
-        Ok(v) => v,
+    let filter = match TransactionFilter::parse(
+        query.r#type.as_deref(),
+        query.payment_method.as_deref(),
+        query.date_from.as_deref(),
+        query.date_to.as_deref(),
+    ) {
+        Ok(filter) => filter,
         Err(msg) => {
-            return HttpResponse::BadRequest()
-                .json(ApiResponse::<()>::error(format!("Filter type: {}", msg)));
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(msg));
         }
     };
-
-    let payment_filter =
-        match normalize_filter(query.payment_method.as_deref(), &["cash", "cashless"]) {
-            Ok(v) => v,
-            Err(msg) => {
-                return HttpResponse::BadRequest()
-                    .json(ApiResponse::<()>::error(format!("Filter payment_method: {}", msg)));
-            }
-        };
-
-    let date_from = query.date_from.as_deref().map(str::trim).filter(|d| !d.is_empty());
-    let date_to = query.date_to.as_deref().map(str::trim).filter(|d| !d.is_empty());
-
-    if let Some(d) = date_from {
-        if !is_valid_date(d) {
-            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(
-                "Parameter date_from tidak valid (gunakan YYYY-MM-DD)",
-            ));
-        }
-    }
-
-    if let Some(d) = date_to {
-        if !is_valid_date(d) {
-            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(
-                "Parameter date_to tidak valid (gunakan YYYY-MM-DD)",
-            ));
-        }
-    }
-
-    if let (Some(from), Some(to)) = (date_from, date_to) {
-        if from > to {
-            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(
-                "Rentang tanggal tidak valid: date_from melebihi date_to",
-            ));
-        }
-    }
 
     let page = query.page.unwrap_or(1).max(1);
     let per_page = query
@@ -266,10 +291,10 @@ pub async fn list_transactions(
 
     let filter_params = params![
         auth.user_id,
-        type_filter,
-        payment_filter,
-        date_from,
-        date_to
+        filter.type_filter,
+        filter.payment_filter,
+        filter.date_from,
+        filter.date_to
     ];
 
     // --- Total data sesuai filter (tanpa pagination) ---
@@ -330,10 +355,10 @@ pub async fn list_transactions(
         .query_map(
             params![
                 auth.user_id,
-                type_filter,
-                payment_filter,
-                date_from,
-                date_to,
+                filter.type_filter,
+                filter.payment_filter,
+                filter.date_from,
+                filter.date_to,
                 per_page,
                 offset
             ],

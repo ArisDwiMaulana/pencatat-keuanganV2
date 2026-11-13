@@ -82,6 +82,8 @@ async fn main() -> std::io::Result<()> {
             .service(handlers::transaction::create_transaction)
             .service(handlers::transaction::list_transactions)
             .service(handlers::transaction::delete_transaction)
+            // Export endpoints
+            .service(handlers::export::export_csv)
             // Static files (must be registered after specific API endpoints)
             .service(Files::new("/", "./static").index_file("index.html"))
     })

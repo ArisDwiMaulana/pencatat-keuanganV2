@@ -432,13 +432,13 @@ dotenv = "0.15"
 **Tujuan:** User bisa export data transaksi ke file CSV.
 
 #### Tasks:
-- [ ] Buat `src/handlers/export.rs`:
+- [x] Buat `src/handlers/export.rs`:
   - `GET /api/export/csv` — Export transaksi ke CSV
   - Terima filter params yang sama dengan GET transactions
   - Query semua data (tanpa pagination)
   - Generate CSV: Tanggal, Tipe, Kategori, Jenis Transaksi, Nominal, Keterangan
   - Return sebagai file download (`Content-Disposition: attachment`)
-- [ ] Modifikasi `static/js/riwayat.js`:
+- [x] Modifikasi `static/js/riwayat.js`:
   - Tombol Export CSV → buka URL `/api/export/csv` dengan filter params aktif
   - Browser otomatis download file
 
