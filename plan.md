@@ -369,14 +369,14 @@ dotenv = "0.15"
 **Tujuan:** User bisa melihat riwayat transaksi dengan berbagai filter.
 
 #### Tasks:
-- [ ] Modifikasi `src/handlers/transaction.rs` — Tambah handler GET dengan filter:
+- [x] Modifikasi `src/handlers/transaction.rs` — Tambah handler GET dengan filter:
   - Filter by `type` (income/expense/all)
   - Filter by `payment_method` (cash/cashless/all)
   - Filter by date range (`date_from`, `date_to`)
   - Pagination (`page`, `per_page`)
   - Return total count + data
-- [ ] Buat `static/riwayat.html` — Halaman Riwayat
-- [ ] Buat `static/js/riwayat.js` — Frontend riwayat:
+- [x] Buat `static/riwayat.html` — Halaman Riwayat
+- [x] Buat `static/js/riwayat.js` — Frontend riwayat:
   - Preset periode: Hari Ini, Minggu Ini, Bulan Ini, Bulan Lalu, Custom
   - Auto-load data (default: Bulan Ini)
   - Ringkasan: total pemasukan, pengeluaran, saldo

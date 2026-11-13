@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riwayat Transaksi - Pencatat Keuangan</title>
+    <!-- Tailwind CSS v4 Browser Script -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- DaisyUI v5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+</head>
+<body class="bg-base-200 min-h-screen">
+    <!-- Navbar Placeholder -->
+    <div id="navbar-placeholder"></div>
+
+    <main class="container mx-auto p-4 md:p-6 max-w-5xl">
+        <!-- Filter -->
+        <div class="card bg-base-100 shadow-xl border border-base-300">
+            <div class="card-body">
+                <div>
+                    <h1 class="card-title text-xl font-bold">Riwayat Transaksi</h1>
+                    <p class="text-sm text-base-content/60 mt-1">Filter dan telusuri seluruh catatan keuangan Anda.</p>
+                </div>
+
+                <form id="filter-form" class="space-y-4 mt-2" novalidate>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Periode -->
+                        <div class="form-control">
+                            <label class="label" for="period">
+                                <span class="label-text font-semibold">Periode</span>
+                            </label>
+                            <select id="period" class="select select-bordered w-full">
+                                <option value="today">Hari Ini</option>
+                                <option value="week">Minggu Ini</option>
+                                <option value="month" selected>Bulan Ini</option>
+                                <option value="last_month">Bulan Lalu</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+
+                        <!-- Custom date range -->
+                        <div id="custom-range" class="hidden">
+                            <span class="label py-1">
+                                <span class="label-text font-semibold">Rentang Tanggal Custom</span>
+                            </span>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="label py-1" for="date-from">
+                                        <span class="label-text-alt">Dari</span>
+                                    </label>
+                                    <input type="date" id="date-from" class="input input-bordered input-sm w-full" />
+                                </div>
+                                <div>
+                                    <label class="label py-1" for="date-to">
+                                        <span class="label-text-alt">Sampai</span>
+                                    </label>
+                                    <input type="date" id="date-to" class="input input-bordered input-sm w-full" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Tipe -->
+                        <div class="form-control">
+                            <span class="label">
+                                <span class="label-text font-semibold">Tipe</span>
+                            </span>
+                            <div class="flex flex-wrap gap-5">
+                                <label class="label cursor-pointer gap-2 py-1">
+                                    <input type="radio" name="filter-type" value="all" class="radio radio-primary radio-sm" checked />
+                                    <span class="label-text">Semua</span>
+                                </label>
+                                <label class="label cursor-pointer gap-2 py-1">
+                                    <input type="radio" name="filter-type" value="income" class="radio radio-primary radio-sm" />
+                                    <span class="label-text">📥 Masuk</span>
+                                </label>
+                                <label class="label cursor-pointer gap-2 py-1">
+                                    <input type="radio" name="filter-type" value="expense" class="radio radio-primary radio-sm" />
+                                    <span class="label-text">📤 Keluar</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Jenis -->
+                        <div class="form-control">
+                            <span class="label">
+                                <span class="label-text font-semibold">Jenis</span>
+                            </span>
+                            <div class="flex flex-wrap gap-5">
+                                <label class="label cursor-pointer gap-2 py-1">
+                                    <input type="radio" name="filter-payment" value="all" class="radio radio-primary radio-sm" checked />
+                                    <span class="label-text">Semua</span>
+                                </label>
+                                <label class="label cursor-pointer gap-2 py-1">
+                                    <input type="radio" name="filter-payment" value="cash" class="radio radio-primary radio-sm" />
+                                    <span class="label-text">💵 Cash</span>
+                                </label>
+                                <label class="label cursor-pointer gap-2 py-1">
+                                    <input type="radio" name="filter-payment" value="cashless" class="radio radio-primary radio-sm" />
+                                    <span class="label-text">💳 Cashless</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap justify-end gap-2">
+                        <button type="button" id="btn-reset" class="btn btn-ghost btn-sm md:btn-md">↺ Reset</button>
+                        <button type="submit" id="btn-search" class="btn btn-primary btn-sm md:btn-md shadow">🔍 Cari</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Ringkasan -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+            <div class="card bg-base-100 shadow border border-base-300">
+                <div class="card-body p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-base-content/60">Total Pemasukan</p>
+                    <p id="summary-income" class="text-xl font-bold text-success">Rp 0</p>
+                </div>
+            </div>
+            <div class="card bg-base-100 shadow border border-base-300">
+                <div class="card-body p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-base-content/60">Total Pengeluaran</p>
+                    <p id="summary-expense" class="text-xl font-bold text-error">Rp 0</p>
+                </div>
+            </div>
+            <div class="card bg-base-100 shadow border border-base-300">
+                <div class="card-body p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-base-content/60">Saldo</p>
+                    <p id="summary-balance" class="text-xl font-bold">Rp 0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabel Riwayat -->
+        <div class="card bg-base-100 shadow-xl border border-base-300 mt-6">
+            <div class="card-body">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="card-title text-lg">Data Transaksi</h2>
+                    <span id="result-info" class="text-sm text-base-content/60"></span>
+                </div>
+
+                <!-- Loading -->
+                <div id="history-loading" class="flex justify-center py-10">
+                    <span class="loading loading-spinner loading-md text-primary"></span>
+                </div>
+
+                <!-- Empty state -->
+                <div id="history-empty" class="hidden text-center py-10">
+                    <div class="text-4xl mb-2">🔍</div>
+                    <p class="text-sm text-base-content/60">Tidak ada transaksi pada filter ini.</p>
+                </div>
+
+                <!-- Tabel -->
+                <div id="history-table-wrapper" class="hidden overflow-x-auto">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Tipe</th>
+                                <th>Kategori</th>
+                                <th>Jenis</th>
+                                <th class="text-right">Nominal</th>
+                                <th>Keterangan</th>
+                                <th class="text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transaction-list"></tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div id="pagination" class="hidden flex flex-wrap items-center justify-center gap-2 mt-4">
+                    <div class="join">
+                        <button type="button" id="btn-prev" class="join-item btn btn-sm">« Prev</button>
+                        <span id="page-info" class="join-item btn btn-sm btn-disabled">Halaman 1 dari 1</span>
+                        <button type="button" id="btn-next" class="join-item btn btn-sm">Next »</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/riwayat.js"></script>
+</body>
+</html>

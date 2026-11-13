@@ -195,7 +195,7 @@ async function loadTodayTransactions() {
     try {
         const today = todayISO();
         const res = await apiFetch(
-            `/api/transactions?date_from=${today}&date_to=${today}`
+            `/api/transactions?date_from=${today}&date_to=${today}&per_page=100`
         );
 
         if (!res.ok || !res.data || !res.data.success) {
@@ -206,7 +206,7 @@ async function loadTodayTransactions() {
             return;
         }
 
-        const transactions = res.data.data || [];
+        const transactions = (res.data.data && res.data.data.items) || [];
         renderTodayTransactions(transactions);
     } finally {
         loading.classList.add('hidden');

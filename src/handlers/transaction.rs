@@ -5,18 +5,34 @@ use serde::Deserialize;
 
 use crate::db::DbPool;
 use crate::middleware::AuthenticatedUser;
-use crate::models::{ApiResponse, CreateTransactionRequest, TransactionWithCategory};
+use crate::models::{
+    ApiResponse, CreateTransactionRequest, TransactionListResponse, TransactionSummary,
+    TransactionWithCategory,
+};
 
 #[derive(Debug, Deserialize)]
 pub struct TransactionQuery {
+    pub r#type: Option<String>,
+    pub payment_method: Option<String>,
     pub date_from: Option<String>,
     pub date_to: Option<String>,
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
 }
+
+const DEFAULT_PER_PAGE: i64 = 20;
+const MAX_PER_PAGE: i64 = 100;
 
 const TRANSACTION_SELECT: &str = "SELECT t.id, t.user_id, t.category_id, c.name, t.type,
             t.payment_method, t.amount, t.date, t.note, t.created_at
      FROM transactions t
      JOIN categories c ON c.id = t.category_id";
+
+const TRANSACTION_FILTER: &str = "WHERE t.user_id = ?1
+       AND (?2 IS NULL OR t.type = ?2)
+       AND (?3 IS NULL OR t.payment_method = ?3)
+       AND (?4 IS NULL OR t.date >= ?4)
+       AND (?5 IS NULL OR t.date <= ?5)";
 
 fn row_to_transaction(row: &rusqlite::Row<'_>) -> rusqlite::Result<TransactionWithCategory> {
     Ok(TransactionWithCategory {
@@ -35,6 +51,19 @@ fn row_to_transaction(row: &rusqlite::Row<'_>) -> rusqlite::Result<TransactionWi
 
 fn is_valid_date(value: &str) -> bool {
     NaiveDate::parse_from_str(value, "%Y-%m-%d").is_ok()
+}
+
+/// Normalisasi filter opsional: nilai kosong / "all" berarti tanpa filter.
+fn normalize_filter(value: Option<&str>, allowed: &[&'static str]) -> Result<Option<&'static str>, String> {
+    match value.map(str::trim) {
+        None | Some("") | Some("all") => Ok(None),
+        Some(v) => allowed
+            .iter()
+            .find(|allowed_value| **allowed_value == v)
+            .copied()
+            .map(Some)
+            .ok_or_else(|| format!("Nilai filter '{}' tidak valid", v)),
+    }
 }
 
 #[post("/api/transactions")]
@@ -174,8 +203,26 @@ pub async fn list_transactions(
     auth: AuthenticatedUser,
     query: web::Query<TransactionQuery>,
 ) -> impl Responder {
-    let date_from = query.date_from.as_deref().filter(|d| !d.is_empty());
-    let date_to = query.date_to.as_deref().filter(|d| !d.is_empty());
+    // --- Validasi filter ---
+    let type_filter = match normalize_filter(query.r#type.as_deref(), &["income", "expense"]) {
+        Ok(v) => v,
+        Err(msg) => {
+            return HttpResponse::BadRequest()
+                .json(ApiResponse::<()>::error(format!("Filter type: {}", msg)));
+        }
+    };
+
+    let payment_filter =
+        match normalize_filter(query.payment_method.as_deref(), &["cash", "cashless"]) {
+            Ok(v) => v,
+            Err(msg) => {
+                return HttpResponse::BadRequest()
+                    .json(ApiResponse::<()>::error(format!("Filter payment_method: {}", msg)));
+            }
+        };
+
+    let date_from = query.date_from.as_deref().map(str::trim).filter(|d| !d.is_empty());
+    let date_to = query.date_to.as_deref().map(str::trim).filter(|d| !d.is_empty());
 
     if let Some(d) = date_from {
         if !is_valid_date(d) {
@@ -201,6 +248,13 @@ pub async fn list_transactions(
         }
     }
 
+    let page = query.page.unwrap_or(1).max(1);
+    let per_page = query
+        .per_page
+        .unwrap_or(DEFAULT_PER_PAGE)
+        .clamp(1, MAX_PER_PAGE);
+    let offset = (page - 1) * per_page;
+
     let conn = match db.lock() {
         Ok(guard) => guard,
         Err(_) => {
@@ -210,16 +264,59 @@ pub async fn list_transactions(
         }
     };
 
-    let sql = format!(
-        "{} WHERE t.user_id = ?1
-           AND (?2 IS NULL OR t.date >= ?2)
-           AND (?3 IS NULL OR t.date <= ?3)
-         ORDER BY t.date DESC, t.id DESC
-         LIMIT 500",
-        TRANSACTION_SELECT
+    let filter_params = params![
+        auth.user_id,
+        type_filter,
+        payment_filter,
+        date_from,
+        date_to
+    ];
+
+    // --- Total data sesuai filter (tanpa pagination) ---
+    let count_sql = format!(
+        "SELECT COUNT(*) FROM transactions t {}",
+        TRANSACTION_FILTER
+    );
+    let total: i64 = match conn.query_row(&count_sql, filter_params, |row| row.get(0)) {
+        Ok(total) => total,
+        Err(e) => {
+            log::error!("Count transactions error: {}", e);
+            return HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
+                "Gagal menghitung jumlah transaksi",
+            ));
+        }
+    };
+
+    // --- Ringkasan pemasukan / pengeluaran / saldo sesuai filter ---
+    let summary_sql = format!(
+        "SELECT
+            COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount END), 0),
+            COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount END), 0)
+         FROM transactions t {}",
+        TRANSACTION_FILTER
+    );
+    let summary_res: rusqlite::Result<(f64, f64)> =
+        conn.query_row(&summary_sql, filter_params, |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        });
+
+    let (total_income, total_expense) = match summary_res {
+        Ok(data) => data,
+        Err(e) => {
+            log::error!("Summary transactions error: {}", e);
+            return HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
+                "Gagal menghitung ringkasan transaksi",
+            ));
+        }
+    };
+
+    // --- Ambil data halaman yang diminta ---
+    let list_sql = format!(
+        "{} {} ORDER BY t.date DESC, t.created_at DESC, t.id DESC LIMIT ?6 OFFSET ?7",
+        TRANSACTION_SELECT, TRANSACTION_FILTER
     );
 
-    let mut stmt = match conn.prepare(&sql) {
+    let mut stmt = match conn.prepare(&list_sql) {
         Ok(s) => s,
         Err(e) => {
             log::error!("Prepare list transactions error: {}", e);
@@ -229,22 +326,52 @@ pub async fn list_transactions(
         }
     };
 
-    let transactions_res: rusqlite::Result<Vec<TransactionWithCategory>> = stmt
-        .query_map(params![auth.user_id, date_from, date_to], row_to_transaction)
+    let items_res: rusqlite::Result<Vec<TransactionWithCategory>> = stmt
+        .query_map(
+            params![
+                auth.user_id,
+                type_filter,
+                payment_filter,
+                date_from,
+                date_to,
+                per_page,
+                offset
+            ],
+            row_to_transaction,
+        )
         .and_then(|rows| rows.collect());
 
-    match transactions_res {
-        Ok(transactions) => HttpResponse::Ok().json(ApiResponse::success(
-            "Daftar transaksi berhasil diambil",
-            transactions,
-        )),
+    let items = match items_res {
+        Ok(items) => items,
         Err(e) => {
             log::error!("Query list transactions error: {}", e);
-            HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
+            return HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
                 "Gagal mengambil daftar transaksi",
-            ))
+            ));
         }
-    }
+    };
+
+    let total_pages = if total == 0 {
+        0
+    } else {
+        (total + per_page - 1) / per_page
+    };
+
+    HttpResponse::Ok().json(ApiResponse::success(
+        "Daftar transaksi berhasil diambil",
+        TransactionListResponse {
+            items,
+            total,
+            page,
+            per_page,
+            total_pages,
+            summary: TransactionSummary {
+                total_income,
+                total_expense,
+                balance: total_income - total_expense,
+            },
+        },
+    ))
 }
 
 #[delete("/api/transactions/{id}")]

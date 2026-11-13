@@ -49,6 +49,23 @@ pub struct TransactionWithCategory {
     pub created_at: String,
 }
 
+#[derive(Debug, Serialize)]
+pub struct TransactionSummary {
+    pub total_income: f64,
+    pub total_expense: f64,
+    pub balance: f64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TransactionListResponse {
+    pub items: Vec<TransactionWithCategory>,
+    pub total: i64,
+    pub page: i64,
+    pub per_page: i64,
+    pub total_pages: i64,
+    pub summary: TransactionSummary,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct SignupRequest {
     pub display_name: String,
