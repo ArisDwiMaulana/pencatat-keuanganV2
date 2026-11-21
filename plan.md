@@ -461,18 +461,18 @@ Tanggal,Tipe,Kategori,Jenis Transaksi,Nominal,Keterangan
 **Tujuan:** UI yang responsive, polished, dan user-friendly.
 
 #### Tasks:
-- [ ] Buat `static/css/style.css` — Custom styling tambahan
-- [ ] Modifikasi semua halaman HTML:
+- [x] Buat `static/css/style.css` — Custom styling tambahan
+- [x] Modifikasi semua halaman HTML:
   - Loading spinner saat fetch data
   - Empty state (belum ada transaksi)
   - Konfirmasi sebelum hapus (DaisyUI modal)
   - Toast notifications yang konsisten
   - Form validation visual feedback
   - Navbar active state indicator
-- [ ] Modifikasi `static/js/common.js`:
+- [x] Modifikasi `static/js/common.js`:
   - Auto-redirect ke login jika session expired (401 response)
   - Format tanggal Indonesia (DD/MM/YYYY)
-- [ ] Responsive design:
+- [x] Responsive design:
   - Mobile-first layout
   - Tabel responsive (scroll horizontal atau card view di mobile)
 

@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderNavbar('catat', user);
 
     setupDateField();
+    setupTodayDateLabel();
     setupTabs();
     setupForm();
     setupDeleteHandler();
@@ -25,6 +26,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupDateField() {
     const dateInput = document.getElementById('date');
     if (dateInput) dateInput.value = todayISO();
+}
+
+function setupTodayDateLabel() {
+    const label = document.getElementById('today-date');
+    if (label) label.textContent = `(${formatTanggalIndo(todayISO())})`;
 }
 
 function setupTabs() {
@@ -48,6 +54,8 @@ async function switchType(type) {
     tabExpense.classList.toggle('tab-active', isExpense);
     tabIncome.classList.toggle('tab-active', !isExpense);
 
+    // Kategori berbeda per tipe; bersihkan pilihan & error sebelumnya.
+    clearFieldError(document.getElementById('category'));
     await loadCategories();
 }
 
@@ -55,28 +63,50 @@ function setupForm() {
     const form = document.getElementById('form-transaction');
     if (!form) return;
 
+    const categorySelect = document.getElementById('category');
+    const amountInput = document.getElementById('amount');
+    const dateInput = document.getElementById('date');
+    const noteInput = document.getElementById('note');
+
+    [
+        [categorySelect, 'change'],
+        [amountInput, 'input'],
+        [dateInput, 'change'],
+        [noteInput, 'input'],
+    ].forEach(([input, eventName]) => {
+        if (!input) return;
+        input.addEventListener(eventName, () => clearFieldError(input));
+    });
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        clearFormErrors(form);
 
-        const categoryId = Number(document.getElementById('category').value);
-        const amount = Number(document.getElementById('amount').value);
-        const date = document.getElementById('date').value;
-        const note = document.getElementById('note').value.trim();
+        const categoryId = Number(categorySelect.value);
+        const amount = Number(amountInput.value);
+        const date = dateInput.value;
+        const note = noteInput.value.trim();
         const paymentMethod =
             document.querySelector('input[name="payment_method"]:checked')?.value || 'cash';
+        let valid = true;
 
         if (!categoryId) {
-            showToast('Pilih kategori terlebih dahulu', 'warning');
-            return;
+            setFieldError(categorySelect, 'Pilih kategori terlebih dahulu');
+            valid = false;
         }
 
         if (!amount || isNaN(amount) || amount <= 0) {
-            showToast('Nominal harus lebih dari 0', 'warning');
-            return;
+            setFieldError(amountInput, 'Nominal harus lebih dari 0');
+            valid = false;
         }
 
         if (!date) {
-            showToast('Tanggal wajib diisi', 'warning');
+            setFieldError(dateInput, 'Tanggal wajib diisi');
+            valid = false;
+        }
+
+        if (!valid) {
+            showToast('Lengkapi data transaksi terlebih dahulu', 'warning');
             return;
         }
 
@@ -98,16 +128,16 @@ function setupForm() {
 
             if (res.ok && res.data && res.data.success) {
                 showToast(res.data.message || 'Transaksi berhasil disimpan', 'success');
-                document.getElementById('amount').value = '';
-                document.getElementById('note').value = '';
-                document.getElementById('amount').focus();
+                amountInput.value = '';
+                noteInput.value = '';
+                amountInput.focus();
                 await loadTodayTransactions();
             } else {
                 const msg = (res.data && res.data.message) || 'Gagal menyimpan transaksi';
                 showToast(msg, 'error');
             }
         } finally {
-            setButtonLoading(btn, false, '💾 Simpan');
+            setButtonLoading(btn, false);
         }
     });
 }
@@ -121,7 +151,13 @@ function setupDeleteHandler() {
         if (!button) return;
 
         const id = button.getAttribute('data-delete-id');
-        if (!confirm('Yakin ingin menghapus transaksi ini?')) return;
+        const confirmed = await showConfirmDialog({
+            title: 'Hapus Transaksi',
+            message: 'Transaksi ini akan dihapus permanen. Lanjutkan?',
+            confirmText: 'Ya, Hapus',
+        });
+
+        if (!confirmed) return;
 
         button.disabled = true;
 
@@ -247,7 +283,7 @@ function renderTodayTransactions(transactions) {
             const isIncome = trx.type === 'income';
             const amountClass = isIncome ? 'text-success' : 'text-error';
             const sign = isIncome ? '+' : '−';
-            const methodLabel = trx.payment_method === 'cash' ? '💵 Cash' : '💳 Cashless';
+            const methodLabel = trx.payment_method === 'cash' ? 'Cash' : 'Cashless';
             const note = trx.note
                 ? `<div class="text-xs text-base-content/60 mt-0.5">${escapeHtml(trx.note)}</div>`
                 : '';
@@ -265,11 +301,11 @@ function renderTodayTransactions(transactions) {
                     <td class="text-right">
                         <button
                             type="button"
-                            class="btn btn-ghost btn-xs text-error"
+                            class="btn btn-error btn-xs"
                             data-delete-id="${trx.id}"
                             title="Hapus transaksi"
                             aria-label="Hapus transaksi"
-                        >🗑️</button>
+                        >Hapus</button>
                     </td>
                 </tr>
             `;
@@ -283,23 +319,4 @@ function todayISO() {
     const now = new Date();
     const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
     return local.toISOString().slice(0, 10);
-}
-
-function setButtonLoading(button, isLoading, text) {
-    if (!button) return;
-    button.disabled = isLoading;
-    if (isLoading) {
-        button.innerHTML = `<span class="loading loading-spinner loading-sm"></span> ${text}`;
-    } else {
-        button.innerHTML = text;
-    }
-}
-
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
 }

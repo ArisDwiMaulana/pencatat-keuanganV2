@@ -46,6 +46,8 @@ function setupFilterListeners() {
 
     if (period) {
         period.addEventListener('change', () => {
+            clearFieldError(document.getElementById('date-from'));
+            clearFieldError(document.getElementById('date-to'));
             toggleCustomRange();
             loadTransactions(1);
         });
@@ -63,6 +65,7 @@ function setupFilterListeners() {
         const input = document.getElementById(id);
         if (input) {
             input.addEventListener('change', () => {
+                clearFieldError(input);
                 if (isCustomPeriod() && customRangeIsComplete()) {
                     loadTransactions(1);
                 }
@@ -79,6 +82,7 @@ function setupFilterListeners() {
             document.querySelector('input[name="filter-payment"][value="all"]').checked = true;
 
             setupCustomDateDefaults();
+            clearFormErrors(form);
             toggleCustomRange();
             loadTransactions(1);
         });
@@ -96,7 +100,10 @@ function isCustomPeriod() {
 }
 
 function customRangeIsComplete() {
-    return Boolean(document.getElementById('date-from')?.value && document.getElementById('date-to')?.value);
+    return Boolean(
+        document.getElementById('date-from')?.value &&
+            document.getElementById('date-to')?.value
+    );
 }
 
 function getSelectedFilter(name, fallback = 'all') {
@@ -132,6 +139,29 @@ function getDateRange() {
     }
 }
 
+function validateCustomRange(range) {
+    const fromInput = document.getElementById('date-from');
+    const toInput = document.getElementById('date-to');
+    let valid = true;
+
+    if (!range.from) {
+        setFieldError(fromInput, 'Tanggal awal wajib diisi');
+        valid = false;
+    }
+
+    if (!range.to) {
+        setFieldError(toInput, 'Tanggal akhir wajib diisi');
+        valid = false;
+    }
+
+    if (valid && range.from > range.to) {
+        setFieldError(fromInput, 'Tidak boleh melebihi tanggal akhir');
+        valid = false;
+    }
+
+    return valid;
+}
+
 /* --------------------------------- Data ---------------------------------- */
 
 async function loadTransactions(page = 1) {
@@ -142,6 +172,18 @@ async function loadTransactions(page = 1) {
     const tbody = document.getElementById('transaction-list');
 
     const range = getDateRange();
+
+    if (isCustomPeriod()) {
+        const fromInput = document.getElementById('date-from');
+        const toInput = document.getElementById('date-to');
+        clearFieldError(fromInput);
+        clearFieldError(toInput);
+
+        if (!validateCustomRange(range)) {
+            showToast('Periksa kembali rentang tanggal custom', 'warning');
+            return;
+        }
+    }
 
     if (!range.from || !range.to) {
         showToast('Lengkapi tanggal "Dari" dan "Sampai" untuk filter custom', 'warning');
@@ -230,7 +272,7 @@ function renderTransactions(transactions) {
                 : '<span class="badge badge-error badge-sm text-white">Keluar</span>';
             const amountClass = isIncome ? 'text-success' : 'text-error';
             const sign = isIncome ? '+' : '−';
-            const methodLabel = trx.payment_method === 'cash' ? '💵 Cash' : '💳 Cashless';
+            const methodLabel = trx.payment_method === 'cash' ? 'Cash' : 'Cashless';
             const note = trx.note || '';
             const noteCell = note
                 ? `<span class="block max-w-[12rem] truncate text-base-content/70" title="${escapeHtml(note)}">${escapeHtml(note)}</span>`
@@ -238,7 +280,7 @@ function renderTransactions(transactions) {
 
             return `
                 <tr>
-                    <td class="whitespace-nowrap">${formatDateIndo(trx.date)}</td>
+                    <td class="whitespace-nowrap">${formatTanggalIndo(trx.date)}</td>
                     <td>${badge}</td>
                     <td class="font-medium whitespace-nowrap">${escapeHtml(trx.category_name)}</td>
                     <td class="whitespace-nowrap text-xs">${methodLabel}</td>
@@ -249,11 +291,11 @@ function renderTransactions(transactions) {
                     <td class="text-right">
                         <button
                             type="button"
-                            class="btn btn-ghost btn-xs text-error"
+                            class="btn btn-error btn-xs"
                             data-delete-id="${trx.id}"
                             title="Hapus transaksi"
                             aria-label="Hapus transaksi"
-                        >🗑️</button>
+                        >Hapus</button>
                     </td>
                 </tr>
             `;
@@ -308,7 +350,10 @@ function renderPagination() {
     }
 
     pagination.classList.remove('hidden');
-    pageInfo.textContent = `Halaman ${riwayatState.page} dari ${Math.max(1, riwayatState.totalPages)}`;
+    pageInfo.textContent = `Halaman ${riwayatState.page} dari ${Math.max(
+        1,
+        riwayatState.totalPages
+    )}`;
     btnPrev.disabled = riwayatState.page <= 1;
     btnNext.disabled = riwayatState.page >= riwayatState.totalPages;
 }
@@ -324,7 +369,13 @@ function setupDeleteHandler() {
         if (!button) return;
 
         const id = button.getAttribute('data-delete-id');
-        if (!confirm('Yakin ingin menghapus transaksi ini?')) return;
+        const confirmed = await showConfirmDialog({
+            title: 'Hapus Transaksi',
+            message: 'Transaksi ini akan dihapus permanen. Lanjutkan?',
+            confirmText: 'Ya, Hapus',
+        });
+
+        if (!confirmed) return;
 
         button.disabled = true;
 
@@ -365,6 +416,11 @@ function setupExport() {
 
 function exportCsv() {
     const range = getDateRange();
+
+    if (isCustomPeriod() && !validateCustomRange(range)) {
+        showToast('Periksa kembali rentang tanggal custom', 'warning');
+        return;
+    }
 
     if (!range.from || !range.to) {
         showToast('Lengkapi tanggal "Dari" dan "Sampai" untuk export CSV', 'warning');
@@ -415,20 +471,4 @@ function getWeekRange() {
     const monday = new Date(now);
     monday.setDate(now.getDate() - dayIndex);
     return { from: toISODate(monday), to: toISODate(now) };
-}
-
-function formatDateIndo(isoDate) {
-    if (!isoDate) return '—';
-    const [year, month, day] = isoDate.split('-');
-    if (!year || !month || !day) return isoDate;
-    return `${day}/${month}/${year}`;
-}
-
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
 }

@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // If user already logged in, redirect directly to catat.html
     const user = await checkAuth(false);
     if (user) {
-        window.location.href = '/catat.html';
+        window.location.replace('/catat.html');
         return;
     }
 
@@ -26,6 +26,7 @@ function setupTabs() {
         tabSignup.classList.remove('tab-active');
         formLogin.classList.remove('hidden');
         formSignup.classList.add('hidden');
+        clearFormErrors(formSignup);
     });
 
     tabSignup.addEventListener('click', (e) => {
@@ -34,6 +35,7 @@ function setupTabs() {
         tabLogin.classList.remove('tab-active');
         formSignup.classList.remove('hidden');
         formLogin.classList.add('hidden');
+        clearFormErrors(formLogin);
     });
 }
 
@@ -42,21 +44,39 @@ function setupForms() {
     const formSignup = document.getElementById('form-signup');
 
     if (formLogin) {
+        const usernameInput = document.getElementById('login-username');
+        const passwordInput = document.getElementById('login-password');
+        const btn = document.getElementById('btn-login');
+
+        [usernameInput, passwordInput].forEach((input) => {
+            if (!input) return;
+            input.addEventListener('input', () => clearFieldError(input));
+        });
+
         formLogin.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('btn-login');
-            const usernameInput = document.getElementById('login-username');
-            const passwordInput = document.getElementById('login-password');
+            clearFormErrors(formLogin);
 
             const username = usernameInput.value.trim();
             const password = passwordInput.value;
+            let valid = true;
 
-            if (!username || !password) {
-                showToast('Username dan password wajib diisi', 'warning');
+            if (!username) {
+                setFieldError(usernameInput, 'Username wajib diisi');
+                valid = false;
+            }
+
+            if (!password) {
+                setFieldError(passwordInput, 'Password wajib diisi');
+                valid = false;
+            }
+
+            if (!valid) {
+                showToast('Lengkapi data login terlebih dahulu', 'warning');
                 return;
             }
 
-            setLoading(btn, true, 'Sedang masuk...');
+            setButtonLoading(btn, true, 'Sedang masuk...');
 
             try {
                 const res = await apiFetch('/api/auth/login', {
@@ -67,50 +87,71 @@ function setupForms() {
                 if (res.ok && res.data && res.data.success) {
                     showToast('Login berhasil! Mengalihkan...', 'success');
                     setTimeout(() => {
-                        window.location.href = '/catat.html';
+                        window.location.replace('/catat.html');
                     }, 500);
                 } else {
                     const msg = (res.data && res.data.message) || 'Username atau password salah';
                     showToast(msg, 'error');
+                    if (res.status === 401) {
+                        setFieldError(passwordInput, 'Periksa kembali username dan password Anda');
+                    }
                 }
             } catch (err) {
                 showToast('Terjadi kesalahan jaringan', 'error');
             } finally {
-                setLoading(btn, false, '🔑 Masuk');
+                setButtonLoading(btn, false);
             }
         });
     }
 
     if (formSignup) {
+        const displayNameInput = document.getElementById('signup-name');
+        const usernameInput = document.getElementById('signup-username');
+        const passwordInput = document.getElementById('signup-password');
+        const confirmInput = document.getElementById('signup-confirm-password');
+        const btn = document.getElementById('btn-signup');
+
+        [displayNameInput, usernameInput, passwordInput, confirmInput].forEach((input) => {
+            if (!input) return;
+            input.addEventListener('input', () => clearFieldError(input));
+        });
+
         formSignup.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('btn-signup');
-            const displayName = document.getElementById('signup-name').value.trim();
-            const username = document.getElementById('signup-username').value.trim();
-            const password = document.getElementById('signup-password').value;
-            const confirmPassword = document.getElementById('signup-confirm-password').value;
+            clearFormErrors(formSignup);
+
+            const displayName = displayNameInput.value.trim();
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+            const confirmPassword = confirmInput.value;
+            let valid = true;
 
             if (!displayName) {
-                showToast('Nama tampilan wajib diisi', 'warning');
-                return;
+                setFieldError(displayNameInput, 'Nama tampilan wajib diisi');
+                valid = false;
             }
 
             if (username.length < 3) {
-                showToast('Username minimal 3 karakter', 'warning');
-                return;
+                setFieldError(usernameInput, 'Username minimal 3 karakter');
+                valid = false;
             }
 
             if (password.length < 6) {
-                showToast('Password minimal 6 karakter', 'warning');
-                return;
+                setFieldError(passwordInput, 'Password minimal 6 karakter');
+                valid = false;
             }
 
             if (password !== confirmPassword) {
-                showToast('Konfirmasi password tidak cocok', 'warning');
+                setFieldError(confirmInput, 'Konfirmasi password tidak cocok');
+                valid = false;
+            }
+
+            if (!valid) {
+                showToast('Periksa kembali data pendaftaran Anda', 'warning');
                 return;
             }
 
-            setLoading(btn, true, 'Mendaftarkan...');
+            setButtonLoading(btn, true, 'Mendaftarkan...');
 
             try {
                 const res = await apiFetch('/api/auth/signup', {
@@ -125,27 +166,25 @@ function setupForms() {
                 if (res.ok && res.data && res.data.success) {
                     showToast('Pendaftaran berhasil! Mengalihkan...', 'success');
                     setTimeout(() => {
-                        window.location.href = '/catat.html';
+                        window.location.replace('/catat.html');
                     }, 500);
                 } else {
                     const msg = (res.data && res.data.message) || 'Gagal mendaftar';
                     showToast(msg, 'error');
+
+                    if (msg.toLowerCase().includes('username')) {
+                        setFieldError(usernameInput, msg);
+                    } else if (msg.toLowerCase().includes('password')) {
+                        setFieldError(passwordInput, msg);
+                    } else if (msg.toLowerCase().includes('nama')) {
+                        setFieldError(displayNameInput, msg);
+                    }
                 }
             } catch (err) {
                 showToast('Terjadi kesalahan jaringan', 'error');
             } finally {
-                setLoading(btn, false, '✨ Buat Akun');
+                setButtonLoading(btn, false);
             }
         });
-    }
-}
-
-function setLoading(button, isLoading, text) {
-    if (!button) return;
-    button.disabled = isLoading;
-    if (isLoading) {
-        button.innerHTML = `<span class="loading loading-spinner loading-sm"></span> ${text}`;
-    } else {
-        button.innerHTML = text;
     }
 }

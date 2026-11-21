@@ -3,11 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff" />
     <title>Catat Transaksi - Pencatat Keuangan</title>
+    <!-- Terapkan tema sebelum render untuk menghindari flash -->
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('pencatat-theme');
+                var prefersDark =
+                    window.matchMedia &&
+                    window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute(
+                    'data-theme',
+                    stored || (prefersDark ? 'dark' : 'light')
+                );
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
     <!-- Tailwind CSS v4 Browser Script -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- DaisyUI v5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <!-- Custom styles -->
+    <link href="/css/style.css" rel="stylesheet" type="text/css" />
 </head>
 <body class="bg-base-200 min-h-screen">
     <!-- Navbar Placeholder -->
@@ -23,12 +43,12 @@
                 </div>
 
                 <!-- Toggle Tipe Transaksi -->
-                <div role="tablist" class="tabs tabs-boxed w-full mt-2">
+                <div role="tablist" class="tabs tabs-box w-full mt-2 bg-base-200 p-1">
                     <button type="button" role="tab" id="tab-expense" class="tab tab-active flex-1 font-semibold">
-                        📤 Pengeluaran
+                        Pengeluaran
                     </button>
                     <button type="button" role="tab" id="tab-income" class="tab flex-1 font-semibold">
-                        📥 Pemasukan
+                        Pemasukan
                     </button>
                 </div>
 
@@ -51,11 +71,11 @@
                         <div class="flex flex-wrap gap-6">
                             <label class="label cursor-pointer gap-2 py-1">
                                 <input type="radio" name="payment_method" value="cash" class="radio radio-primary radio-sm" checked />
-                                <span class="label-text">💵 Cash</span>
+                                <span class="label-text">Cash</span>
                             </label>
                             <label class="label cursor-pointer gap-2 py-1">
                                 <input type="radio" name="payment_method" value="cashless" class="radio radio-primary radio-sm" />
-                                <span class="label-text">💳 Cashless</span>
+                                <span class="label-text">Cashless</span>
                             </label>
                         </div>
                     </div>
@@ -89,7 +109,7 @@
 
                     <div class="form-control mt-2">
                         <button type="submit" id="btn-save" class="btn btn-primary w-full shadow">
-                            💾 Simpan
+                            Simpan
                         </button>
                     </div>
                 </form>
@@ -100,24 +120,27 @@
         <div class="card bg-base-100 shadow-xl border border-base-300 mt-6">
             <div class="card-body">
                 <div class="flex flex-wrap items-center justify-between gap-2">
-                    <h2 class="card-title text-lg">Transaksi Hari Ini</h2>
+                    <h2 class="card-title text-lg">
+                        Transaksi Hari Ini
+                        <span id="today-date" class="text-sm font-normal text-base-content/60"></span>
+                    </h2>
                     <div id="today-summary" class="flex flex-wrap gap-2"></div>
                 </div>
 
                 <!-- Loading -->
-                <div id="today-loading" class="flex justify-center py-6">
+                <div id="today-loading" class="flex items-center justify-center gap-2 py-6">
                     <span class="loading loading-spinner loading-md text-primary"></span>
+                    <span class="text-sm text-base-content/60">Memuat transaksi...</span>
                 </div>
 
                 <!-- Empty state -->
                 <div id="today-empty" class="hidden text-center py-8">
-                    <div class="text-4xl mb-2">🗒️</div>
                     <p class="text-sm text-base-content/60">Belum ada transaksi hari ini.</p>
                 </div>
 
                 <!-- Tabel -->
-                <div id="today-table-wrapper" class="hidden overflow-x-auto">
-                    <table class="table table-sm">
+                <div id="today-table-wrapper" class="hidden overflow-x-auto table-scroll">
+                    <table class="table table-sm data-table">
                         <thead>
                             <tr>
                                 <th>Kategori</th>
